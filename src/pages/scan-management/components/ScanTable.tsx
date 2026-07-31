@@ -4,8 +4,9 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, StatusBadge } from "@/components/common";
 import { SearchInput } from "@/components/common/SearchInput";
 
-import type { Scan, EntityStatus } from "@/types";
 
+import type { Scan } from "@/mock-data/scans";
+import type { EntityStatus } from "@/types";
 interface ScanTableProps {
   scans: Scan[];
   onSelect?: (scan: Scan) => void;
@@ -13,19 +14,16 @@ interface ScanTableProps {
 
 function badgeStatus(status: Scan["status"]): EntityStatus {
   switch (status) {
-    case "scheduled":
+    case "Queued":
       return "pending";
 
-    case "completed":
+    case "Completed":
       return "completed";
 
-    case "failed":
+    case "Failed":
       return "failed";
 
-    case "paused":
-      return "paused";
-
-    case "scanning":
+    case "Running":
     default:
       return "scanning";
   }
@@ -44,15 +42,16 @@ export function ScanTable({
 
     return scans.filter((scan) =>
       [
-        scan.id,
-        scan.name,
-        scan.repositoryName,
-        scan.status,
-        scan.triggeredBy,
-        scan.duration,
-        scan.startedAt,
-        scan.assetsScanned,
-        scan.sensitiveFound,
+        [
+          scan.id,
+          scan.name,
+          scan.repository,
+          scan.status,
+          scan.initiatedBy,
+          scan.startedAt,
+          scan.assetsScanned,
+          scan.findings,
+        ]
       ]
         .join(" ")
         .toLowerCase()
@@ -75,7 +74,7 @@ export function ScanTable({
           </p>
 
           <p className="text-xs text-muted-foreground">
-            {row.original.repositoryName}
+          {row.original.repository}
           </p>
         </div>
       ),
@@ -120,15 +119,15 @@ export function ScanTable({
       header: "Assets",
     },
     {
-      accessorKey: "sensitiveFound",
+      accessorKey: "findings",
       header: "Sensitive",
     },
     {
-      accessorKey: "triggeredBy",
+      accessorKey: "initiatedBy",
       header: "Triggered By",
     },
     {
-      accessorKey: "duration",
+      accessorKey: "estimatedCompletion",
       header: "Duration",
     },
   ];

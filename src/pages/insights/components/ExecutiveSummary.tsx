@@ -1,6 +1,6 @@
 import { executiveMetrics } from "@/mock-data/insights";
-import { MetricCard } from "@/components/dashboard/MetricCard";
 
+import { MetricCard } from "@/components/common";
 export function ExecutiveSummary() {
   return (
     <section className="space-y-6">

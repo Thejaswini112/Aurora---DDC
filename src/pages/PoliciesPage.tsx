@@ -45,7 +45,6 @@ export function PoliciesPage() {
   return (
     <Page className="space-y-8">
       {/* Header */}
-
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Policies</h1>
@@ -63,35 +62,33 @@ export function PoliciesPage() {
       </div>
 
       {/* Metrics */}
-
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Total Policies"
+          label="Total Policies"
           value={totalPolicies}
           icon={ScrollText}
         />
 
         <MetricCard
-          title="Active Policies"
+          label="Active Policies"
           value={activePolicies}
           icon={ShieldCheck}
         />
 
         <MetricCard
-          title="Draft Policies"
+          label="Draft Policies"
           value={draftPolicies}
           icon={FileCheck2}
         />
 
         <MetricCard
-          title="Violations"
+          label="Violations"
           value={totalViolations}
           icon={AlertTriangle}
         />
       </div>
 
       {/* Search */}
-
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
 
@@ -104,7 +101,6 @@ export function PoliciesPage() {
       </div>
 
       {/* Table */}
-
       <PoliciesTable policies={filteredPolicies} />
     </Page>
   );

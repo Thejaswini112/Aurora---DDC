@@ -7,7 +7,7 @@ import {
 } from "@/components/common";
 
 import { scans as initialScans } from "@/mock-data/scans";
-import type { Scan } from "@/types";
+import type { Scan } from "@/mock-data/scans";
 
 import { ScanMetrics } from "./scan-management/components/ScanMetrics";
 import { ScanTable } from "./scan-management/components/ScanTable";
@@ -24,15 +24,15 @@ export function ScanManagementPage() {
       total: scans.length,
 
       running: scans.filter(
-        (scan) => scan.status === "scanning"
+        (scan) => scan.status === "Running"
       ).length,
 
       completed: scans.filter(
-        (scan) => scan.status === "completed"
+        (scan) => scan.status === "Completed"
       ).length,
 
       failed: scans.filter(
-        (scan) => scan.status === "failed"
+        (scan) => scan.status === "Failed"
       ).length,
     };
   }, [scans]);
