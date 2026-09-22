@@ -6,7 +6,7 @@ import {
   PageHeader,
 } from "@/components/common";
 
-import { detections as initialDetections } from "@/mock-data/detections";
+import { detections as initialDetections } from "@/mock-data";
 import type { Detection } from "@/types";
 
 import { DetectionMetrics } from "./detections/components/DetectionMetrics";

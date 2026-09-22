@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Policy } from "@/mock-data/policies";
+import type { Policy } from "@/types";
 import { Eye } from "lucide-react";
 
 interface PoliciesTableProps {
@@ -8,16 +8,16 @@ interface PoliciesTableProps {
 }
 
 const statusVariant = {
-  Active: "default",
-  Draft: "secondary",
-  Disabled: "outline",
+  enforced: "default",
+  draft: "secondary",
+  paused: "outline",
 } as const;
 
 const severityClass = {
-  Critical: "bg-red-100 text-red-700 border-red-200",
-  High: "bg-orange-100 text-orange-700 border-orange-200",
-  Medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  Low: "bg-green-100 text-green-700 border-green-200",
+  critical: "bg-red-100 text-red-700 border-red-200",
+  high: "bg-orange-100 text-orange-700 border-orange-200",
+  medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  low: "bg-green-100 text-green-700 border-green-200",
 };
 
 export function PoliciesTable({ policies }: PoliciesTableProps) {
@@ -85,7 +85,7 @@ export function PoliciesTable({ policies }: PoliciesTableProps) {
               </td>
 
               <td className="px-6 py-4 text-muted-foreground">
-                {policy.lastModified}
+                {policy.lastUpdated}
               </td>
 
               <td className="px-6 py-4 text-right">

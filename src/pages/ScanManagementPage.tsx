@@ -6,8 +6,8 @@ import {
   PageHeader,
 } from "@/components/common";
 
-import { scans as initialScans } from "@/mock-data/scans";
-import type { Scan } from "@/mock-data/scans";
+import { scans as initialScans } from "@/mock-data";
+import type { Scan } from "@/types";
 
 import { ScanMetrics } from "./scan-management/components/ScanMetrics";
 import { ScanTable } from "./scan-management/components/ScanTable";
@@ -24,15 +24,15 @@ export function ScanManagementPage() {
       total: scans.length,
 
       running: scans.filter(
-        (scan) => scan.status === "Running"
+        (scan) => scan.status === "scanning"
       ).length,
 
       completed: scans.filter(
-        (scan) => scan.status === "Completed"
+        (scan) => scan.status === "completed"
       ).length,
 
       failed: scans.filter(
-        (scan) => scan.status === "Failed"
+        (scan) => scan.status === "failed"
       ).length,
     };
   }, [scans]);

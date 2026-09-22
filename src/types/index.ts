@@ -7,6 +7,7 @@ export type EntityStatus =
   | 'completed'
   | 'failed'
   | 'pending'
+  | 'scheduled'
   | 'draft'
   | 'enforced'
   | 'investigating'
@@ -93,20 +94,28 @@ export interface Detection {
 export interface Scan {
   id: string;
   name: string;
+  repositoryId: string;
   repositoryName: string;
+  type: 'full' | 'incremental' | 'scheduled';
   status: ScanStatus;
   progress: number;
   startedAt: string;
+  lastRun: string;
   duration: string;
+  estimatedCompletion: string;
   assetsScanned: number;
   sensitiveFound: number;
   triggeredBy: string;
 }
 
+export type ComplianceFramework = 'GDPR' | 'PCI-DSS' | 'SOC 2' | 'HIPAA' | 'ISO 27001';
+
 export interface Policy {
   id: string;
   name: string;
+  framework: ComplianceFramework;
   type: PolicyType;
+  category: string;
   status: PolicyStatus;
   severity: Severity;
   repositories: number;

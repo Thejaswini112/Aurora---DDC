@@ -66,6 +66,7 @@ export function RiskScoreBadge({ level, className }: { level: RiskLevel; classNa
 const statusConfig: Record<EntityStatus, { label: string; classes: string; dot?: string }> = {
   active: { label: 'Active', classes: 'bg-success/10 text-success border-success/20', dot: 'bg-success' },
   scanning: { label: 'Scanning', classes: 'bg-primary/10 text-primary border-primary/20', dot: 'bg-primary' },
+  scheduled: { label: 'Scheduled', classes: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground' },
   paused: { label: 'Paused', classes: 'bg-muted text-muted-foreground border-border', dot: 'bg-muted-foreground' },
   completed: { label: 'Completed', classes: 'bg-success/10 text-success border-success/20', dot: 'bg-success' },
   failed: { label: 'Failed', classes: 'bg-danger/10 text-danger border-danger/20', dot: 'bg-danger' },

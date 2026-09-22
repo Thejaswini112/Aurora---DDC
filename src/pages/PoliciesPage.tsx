@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 
 import { MetricCard, Page } from "@/components/common";
 import { PoliciesTable } from "@/components/policies/PoliciesTable";
-import { policies } from "@/mock-data/policies";
+import { policies } from "@/mock-data";
 
 export function PoliciesPage() {
   const [search, setSearch] = useState("");
@@ -22,7 +22,7 @@ export function PoliciesPage() {
     return policies.filter(
       (policy) =>
         policy.name.toLowerCase().includes(search.toLowerCase()) ||
-        policy.framework.toLowerCase().includes(search.toLowerCase()) ||
+        policy.type.toLowerCase().includes(search.toLowerCase()) ||
         policy.category.toLowerCase().includes(search.toLowerCase())
     );
   }, [search]);
@@ -30,11 +30,11 @@ export function PoliciesPage() {
   const totalPolicies = policies.length;
 
   const activePolicies = policies.filter(
-    (policy) => policy.status === "Active"
+    (policy) => policy.status === "enforced"
   ).length;
 
   const draftPolicies = policies.filter(
-    (policy) => policy.status === "Draft"
+    (policy) => policy.status === "draft"
   ).length;
 
   const totalViolations = policies.reduce(

@@ -2,7 +2,7 @@ import {
     Drawer,
   } from "@/components/common";
   
-  import type { Scan } from "@/mock-data/scans";
+  import type { Scan } from "@/types";
   
   import {
     Database,
@@ -30,7 +30,7 @@ import {
   }
   
   const STATUS = {
-    Running: {
+    scanning: {
       icon: PlayCircle,
       color: "text-primary",
       badge: "default" as const,
@@ -38,8 +38,7 @@ import {
       description:
         "Aurora is actively discovering sensitive assets. Findings will appear as the scan progresses.",
     },
-  
-    Completed: {
+    completed: {
       icon: CheckCircle2,
       color: "text-success",
       badge: "secondary" as const,
@@ -47,8 +46,7 @@ import {
       description:
         "The scan completed successfully. All findings have been indexed and are available for investigation.",
     },
-  
-    Failed: {
+    failed: {
       icon: AlertTriangle,
       color: "text-danger",
       badge: "destructive" as const,
@@ -56,17 +54,24 @@ import {
       description:
         "The scan terminated before completion. Review the connector health and restart the scan.",
     },
-  
-    Queued: {
+    scheduled: {
       icon: TimerReset,
       color: "text-warning",
       badge: "outline" as const,
-      title: "Waiting to Start",
+      title: "Scheduled",
       description:
-        "This scan has been queued and will automatically begin when compute resources become available.",
+        "This scan is scheduled and will begin automatically at its configured time.",
     },
-  };
-  
+    paused: {
+      icon: TimerReset,
+      color: "text-warning",
+      badge: "outline" as const,
+      title: "Scan Paused",
+      description:
+        "This scan is paused and can be resumed when the repository is ready.",
+    },
+  } as const;
+
   export function ScanDrawer({
     scan,
     open,
@@ -82,7 +87,7 @@ import {
         open={open}
         onOpenChange={onOpenChange}
         title={scan.name}
-        description={scan.repository}
+        description={scan.repositoryName}
         footer={
           <>
             <Button
@@ -92,13 +97,13 @@ import {
               Close
             </Button>
   
-            {scan.status === "Running" && (
+            {scan.status === "scanning" && (
               <Button variant="destructive">
                 Stop Scan
               </Button>
             )}
   
-            {scan.status === "Queued" && (
+            {scan.status === "scheduled" && (
               <Button>
                 Start Scan
               </Button>
@@ -184,7 +189,7 @@ import {
               <StatCard
                 icon={ShieldCheck}
                 title="Sensitive Findings"
-                value={scan.findings.toString()}
+                value={scan.sensitiveFound.toString()}
               />
   
               <StatCard
@@ -216,13 +221,13 @@ import {
               <InfoRow
                 icon={Database}
                 label="Repository"
-                value={scan.repository}
+                value={scan.repositoryName}
               />
   
               <InfoRow
                 icon={User}
                 label="Initiated By"
-                value={scan.initiatedBy}
+                value={scan.triggeredBy}
               />
   
               <InfoRow
@@ -252,7 +257,7 @@ import {
 
             <TimelineItem
               title="Scan initiated"
-              subtitle={`Started by ${scan.initiatedBy}`}
+              subtitle={`Started by ${scan.triggeredBy}`}
             />
 
             <TimelineItem
@@ -261,7 +266,7 @@ import {
             />
 
             <TimelineItem
-              title={`${scan.findings} sensitive findings detected`}
+              title={`${scan.sensitiveFound} sensitive findings detected`}
               subtitle="Classified using Aurora's detection engine."
             />
 
@@ -292,10 +297,10 @@ import {
             </div>
 
             <p className="text-sm leading-6 text-muted-foreground">
-              {scan.findings === 0
+              {scan.sensitiveFound === 0
                 ? "No sensitive information was detected. Consider scheduling recurring scans to continuously monitor this repository."
-                : `Aurora recommends reviewing the ${scan.findings} discovered finding${
-                    scan.findings > 1 ? "s" : ""
+                : `Aurora recommends reviewing the ${scan.sensitiveFound} discovered finding${
+                    scan.sensitiveFound > 1 ? "s" : ""
                   } and creating remediation policies if they contain regulated data.`}
             </p>
 

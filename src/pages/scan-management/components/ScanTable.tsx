@@ -5,28 +5,14 @@ import { DataTable, StatusBadge } from "@/components/common";
 import { SearchInput } from "@/components/common/SearchInput";
 
 
-import type { Scan } from "@/mock-data/scans";
-import type { EntityStatus } from "@/types";
+import type { EntityStatus, Scan } from "@/types";
 interface ScanTableProps {
   scans: Scan[];
   onSelect?: (scan: Scan) => void;
 }
 
 function badgeStatus(status: Scan["status"]): EntityStatus {
-  switch (status) {
-    case "Queued":
-      return "pending";
-
-    case "Completed":
-      return "completed";
-
-    case "Failed":
-      return "failed";
-
-    case "Running":
-    default:
-      return "scanning";
-  }
+  return status;
 }
 
 export function ScanTable({
@@ -45,12 +31,12 @@ export function ScanTable({
         [
           scan.id,
           scan.name,
-          scan.repository,
+          scan.repositoryName,
           scan.status,
-          scan.initiatedBy,
+          scan.triggeredBy,
           scan.startedAt,
           scan.assetsScanned,
-          scan.findings,
+          scan.sensitiveFound,
         ]
       ]
         .join(" ")
@@ -74,7 +60,7 @@ export function ScanTable({
           </p>
 
           <p className="text-xs text-muted-foreground">
-          {row.original.repository}
+          {row.original.repositoryName}
           </p>
         </div>
       ),
@@ -119,15 +105,15 @@ export function ScanTable({
       header: "Assets",
     },
     {
-      accessorKey: "findings",
+      accessorKey: "sensitiveFound",
       header: "Sensitive",
     },
     {
-      accessorKey: "initiatedBy",
+      accessorKey: "triggeredBy",
       header: "Triggered By",
     },
     {
-      accessorKey: "estimatedCompletion",
+      accessorKey: "duration",
       header: "Duration",
     },
   ];
