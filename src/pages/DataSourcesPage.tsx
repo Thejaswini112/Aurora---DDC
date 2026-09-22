@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Database, Plus, Radar, DatabaseZap } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   PageContainer,
   PageHeader,
@@ -8,17 +9,28 @@ import {
   PrimaryButton,
   SecondaryButton,
 } from '@/components/common';
-import { repositories as baseRepositories, healthStatusForRepository } from '@/mock-data';
+import {
+  repositories as baseRepositories,
+  healthStatusForRepository,
+} from '@/mock-data';
 import { formatNumber } from '@/utils/format';
-import { useToast } from '@/hooks/use-toast';
 import { SummaryCards } from './data-sources/SummaryCards';
 import { RepositoryInventory } from './data-sources/RepositoryInventory';
-import { HealthDonut, ConnectorActivityFeed, DataSourceRecommendation } from './data-sources/RightSidebar';
-import { RepositoryDrawer, type ConnectorEditPayload } from './data-sources/RepositoryDrawer';
+import {
+  HealthDonut,
+  ConnectorActivityFeed,
+  DataSourceRecommendation,
+} from './data-sources/RightSidebar';
+import {
+  RepositoryDrawer,
+  type ConnectorEditPayload,
+} from './data-sources/RepositoryDrawer';
 import { ConnectRepositoryWizard } from './data-sources/ConnectRepositoryWizard';
 import type { Repository } from '@/types';
 
 const STORAGE_KEY = 'aurora-connected-repos';
+const DISCONNECTED_KEY = 'aurora-disconnected-repos';
+const OVERRIDES_KEY = 'aurora-repository-overrides';
 
 function loadConnected(): Repository[] {
   try {
@@ -29,110 +41,276 @@ function loadConnected(): Repository[] {
   }
 }
 
+function loadDisconnected(): string[] {
+  try {
+    const raw = localStorage.getItem(DISCONNECTED_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadOverrides(): Record<string, Partial<Repository>> {
+  try {
+    const raw = localStorage.getItem(OVERRIDES_KEY);
+    return raw
+      ? (JSON.parse(raw) as Record<string, Partial<Repository>>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export function DataSourcesPage() {
-  const { toast } = useToast();
   const [connectedRepos, setConnectedRepos] = useState<Repository[]>([]);
+  const [disconnectedRepoIds, setDisconnectedRepoIds] = useState<string[]>([]);
+  const [repoOverrides, setRepoOverrides] = useState<
+    Record<string, Partial<Repository>>
+  >({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [scanningRepoId, setScanningRepoId] = useState<string | null>(null);
-  const [repoOverrides, setRepoOverrides] = useState<Record<string, Partial<Repository>>>({});
+  const [scanningRepoIds, setScanningRepoIds] = useState<string[]>([]);
 
   useEffect(() => {
     setConnectedRepos(loadConnected());
+    setDisconnectedRepoIds(loadDisconnected());
+    setRepoOverrides(loadOverrides());
   }, []);
 
   const allRepos = useMemo(() => {
     const map = new Map<string, Repository>();
-    [...baseRepositories, ...connectedRepos].forEach((r) => map.set(r.id, r));
-    return Array.from(map.values()).map((r) =>
-      repoOverrides[r.id] ? { ...r, ...repoOverrides[r.id] } : r,
-    );
-  }, [connectedRepos, repoOverrides]);
 
-  const handleRowClick = (repo: Repository) => {
+    baseRepositories.forEach((repo) => {
+      if (!disconnectedRepoIds.includes(repo.id)) {
+        map.set(repo.id, repo);
+      }
+    });
+
+    connectedRepos.forEach((repo) => {
+      if (!disconnectedRepoIds.includes(repo.id)) {
+        map.set(repo.id, repo);
+      }
+    });
+
+    return Array.from(map.values()).map((repo) => ({
+      ...repo,
+      ...(repoOverrides[repo.id] ?? {}),
+      status: scanningRepoIds.includes(repo.id)
+        ? 'scanning'
+        : repoOverrides[repo.id]?.status ?? repo.status,
+    }));
+  }, [
+    connectedRepos,
+    disconnectedRepoIds,
+    repoOverrides,
+    scanningRepoIds,
+  ]);
+
+  const handleRowClick = useCallback((repo: Repository) => {
     setSelectedRepo(repo);
     setDrawerOpen(true);
-  };
-
-  const persistOverride = useCallback((id: string, override: Partial<Repository>) => {
-    setRepoOverrides((prev) => ({ ...prev, [id]: { ...prev[id], ...override } }));
   }, []);
+
+  const persistOverrides = useCallback(
+    (id: string, override: Partial<Repository>) => {
+      setRepoOverrides((prev) => {
+        const next = {
+          ...prev,
+          [id]: {
+            ...prev[id],
+            ...override,
+          },
+        };
+
+        localStorage.setItem(OVERRIDES_KEY, JSON.stringify(next));
+        return next;
+      });
+    },
+    [],
+  );
+
+  const startScan = useCallback(
+    (repo: Repository) => {
+      if (scanningRepoIds.includes(repo.id)) return;
+
+      setScanningRepoIds((prev) => [...prev, repo.id]);
+      persistOverrides(repo.id, { status: 'scanning' });
+
+      toast.success(`Scan started for ${repo.name}.`);
+
+      window.setTimeout(() => {
+        setScanningRepoIds((prev) => prev.filter((id) => id !== repo.id));
+
+        persistOverrides(repo.id, {
+          status: 'active',
+          lastScanned: new Date().toISOString(),
+        });
+
+        toast.success(`Scan completed for ${repo.name}.`);
+      }, 3000);
+    },
+    [persistOverrides, scanningRepoIds],
+  );
 
   const handleRunScan = useCallback(() => {
     if (!selectedRepo) return;
+
     const repo = selectedRepo;
-    setScanningRepoId(repo.id);
-    persistOverride(repo.id, { status: 'scanning' });
+
     setDrawerOpen(false);
-    toast({
-      title: 'Scan started',
-      description: `Scan started for ${repo.name}.`,
-    });
-    window.setTimeout(() => {
-      setScanningRepoId(null);
-      persistOverride(repo.id, { status: 'active', lastScanned: new Date().toISOString() });
-      toast({ title: 'Scan completed successfully.' });
-    }, 3000);
-  }, [selectedRepo, persistOverride, toast]);
+    startScan(repo);
+  }, [selectedRepo, startScan]);
+
+  const handleRunAllScans = useCallback(() => {
+    if (allRepos.length === 0) {
+      toast.error('No repositories are connected.');
+      return;
+    }
+
+    const availableRepos = allRepos.filter(
+      (repo) => !scanningRepoIds.includes(repo.id),
+    );
+
+    if (availableRepos.length === 0) {
+      toast.info('All repositories are already being scanned.');
+      return;
+    }
+
+    availableRepos.forEach(startScan);
+
+    toast.success(
+      `Discovery scan started for ${availableRepos.length} ${
+        availableRepos.length === 1 ? 'repository' : 'repositories'
+      }.`,
+    );
+  }, [allRepos, scanningRepoIds, startScan]);
 
   const handleEditConnector = useCallback(
     (payload: ConnectorEditPayload) => {
       if (!selectedRepo) return;
-      const repo = selectedRepo;
+
+      persistOverrides(selectedRepo.id, {
+        name: payload.name,
+      });
+
       setConnectedRepos((prev) => {
-        const next = prev.map((r) =>
-          r.id === repo.id ? { ...r, name: payload.name } : r,
+        const exists = prev.some((repo) => repo.id === selectedRepo.id);
+
+        if (!exists) return prev;
+
+        const next = prev.map((repo) =>
+          repo.id === selectedRepo.id
+            ? {
+                ...repo,
+                name: payload.name,
+              }
+            : repo,
         );
+
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
         return next;
       });
-      persistOverride(repo.id, { name: payload.name });
-      setSelectedRepo((prev) => (prev ? { ...prev, name: payload.name } : prev));
-      toast({ title: 'Connector updated successfully.' });
+
+      setSelectedRepo((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: payload.name,
+            }
+          : prev,
+      );
+
+      toast.success('Connector updated successfully.');
     },
-    [selectedRepo, persistOverride, toast],
+    [persistOverrides, selectedRepo],
   );
 
   const handleDisconnect = useCallback(() => {
     if (!selectedRepo) return;
+
     const repo = selectedRepo;
+
+    setDisconnectedRepoIds((prev) => {
+      const next = prev.includes(repo.id)
+        ? prev
+        : [...prev, repo.id];
+
+      localStorage.setItem(DISCONNECTED_KEY, JSON.stringify(next));
+      return next;
+    });
+
     setConnectedRepos((prev) => {
-      const next = prev.filter((r) => r.id !== repo.id);
+      const next = prev.filter((item) => item.id !== repo.id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
+
     setRepoOverrides((prev) => {
-      if (!(repo.id in prev)) return prev;
       const next = { ...prev };
       delete next[repo.id];
+      localStorage.setItem(OVERRIDES_KEY, JSON.stringify(next));
       return next;
     });
+
+    setScanningRepoIds((prev) =>
+      prev.filter((id) => id !== repo.id),
+    );
+
     setDrawerOpen(false);
     setSelectedRepo(null);
-    toast({ title: 'Repository disconnected.' });
-  }, [selectedRepo, toast]);
+
+    toast.success(`${repo.name} disconnected successfully.`);
+  }, [selectedRepo]);
 
   const handleConnectComplete = useCallback(
     (repo: Repository) => {
+      setDisconnectedRepoIds((prev) => {
+        const next = prev.filter((id) => id !== repo.id);
+        localStorage.setItem(DISCONNECTED_KEY, JSON.stringify(next));
+        return next;
+      });
+
       setConnectedRepos((prev) => {
-        const next = [...prev.filter((r) => r.id !== repo.id), repo];
+        const next = [
+          ...prev.filter((item) => item.id !== repo.id),
+          repo,
+        ];
+
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
         return next;
       });
-      toast({
-        title: 'Repository connected',
-        description: `${repo.name} has been added to your inventory and is ready for discovery.`,
-      });
+
+      toast.success(
+        `${repo.name} has been added to your inventory and is ready for discovery.`,
+      );
     },
-    [toast],
+    [],
   );
 
   const summary = useMemo(() => {
-    const healthy = allRepos.filter((r) => healthStatusForRepository(r) === 'healthy').length;
-    const needsAttention = allRepos.filter((r) => healthStatusForRepository(r) === 'needs-attention').length;
-    const scanning = allRepos.filter((r) => healthStatusForRepository(r) === 'scanning').length;
-    const totalSensitive = allRepos.reduce((sum, r) => sum + r.sensitiveAssets, 0);
+    const healthStatuses = allRepos.map((repo) =>
+      healthStatusForRepository(repo),
+    );
+
+    const healthy = healthStatuses.filter(
+      (status) => status === 'healthy',
+    ).length;
+
+    const needsAttention = healthStatuses.filter(
+      (status) =>
+        status === 'needs-attention' || status === 'needs-scan',
+    ).length;
+
+    const scanning = healthStatuses.filter(
+      (status) => status === 'scanning',
+    ).length;
+
+    const totalSensitive = allRepos.reduce(
+      (sum, repo) => sum + repo.sensitiveAssets,
+      0,
+    );
+
     return {
       connected: allRepos.length,
       healthy,
@@ -150,10 +328,11 @@ export function DataSourcesPage() {
         icon={Database}
         actions={
           <>
-            <SecondaryButton onClick={() => toast({ title: 'Scan queued', description: 'A new discovery scan has been scheduled across all repositories.' })}>
+            <SecondaryButton onClick={handleRunAllScans}>
               <Radar className="mr-1.5 h-4 w-4" />
               Run Scan
             </SecondaryButton>
+
             <PrimaryButton onClick={() => setWizardOpen(true)}>
               <Plus className="mr-1.5 h-4 w-4" />
               Connect Repository
@@ -162,52 +341,52 @@ export function DataSourcesPage() {
         }
       />
 
-      {allRepos.length === 0 ? (
-        <EmptyStateSection onConnect={() => setWizardOpen(true)} />
-      ) : (
-        <>
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mt-8"
-          >
-            <SummaryCards {...summary} />
-          </motion.div>
+      <div className="mt-6 space-y-6">
+        <SummaryCards
+          connected={summary.connected}
+          healthy={summary.healthy}
+          needsAttention={summary.needsAttention}
+          scanning={summary.scanning}
+          dataProtected={summary.dataProtected}
+        />
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-10">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: 0.05 }}
-              className="lg:col-span-7"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-base font-semibold tracking-tight text-foreground">Repository Inventory</h2>
-                <span className="text-xs text-muted-foreground">{allRepos.length} repositories</span>
-              </div>
-              <RepositoryInventory repositories={allRepos} onRowClick={handleRowClick} />
-            </motion.div>
+        {allRepos.length === 0 ? (
+          <EmptyState
+            icon={DatabaseZap}
+            title="No repositories connected"
+            description="Connect a repository to start discovering and classifying sensitive data."
+            action={
+              <PrimaryButton onClick={() => setWizardOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                Connect Repository
+              </PrimaryButton>
+            }
+          />
+        ) : (
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <RepositoryInventory
+              repositories={allRepos}
+              onRowClick={handleRowClick}
+            />
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: 0.1 }}
-              className="space-y-4 lg:col-span-3"
-            >
-              <HealthDonut />
+            <div className="space-y-6">
+            <HealthDonut />
               <ConnectorActivityFeed />
               <DataSourceRecommendation />
-            </motion.div>
+            </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
 
       <RepositoryDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         repository={selectedRepo}
-        scanning={selectedRepo ? scanningRepoId === selectedRepo.id : false}
+        scanning={
+          selectedRepo
+            ? scanningRepoIds.includes(selectedRepo.id)
+            : false
+        }
         onRunScan={handleRunScan}
         onEditConnector={handleEditConnector}
         onDisconnect={handleDisconnect}
@@ -219,28 +398,5 @@ export function DataSourcesPage() {
         onComplete={handleConnectComplete}
       />
     </PageContainer>
-  );
-}
-
-function EmptyStateSection({ onConnect }: { onConnect: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="mt-12"
-    >
-      <EmptyState
-        icon={DatabaseZap}
-        title="Connect your first repository"
-        description="Connect a data source to begin discovering sensitive organizational data across your cloud, SaaS, and on-prem repositories."
-        action={
-          <PrimaryButton onClick={onConnect}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Connect Repository
-          </PrimaryButton>
-        }
-      />
-    </motion.div>
   );
 }

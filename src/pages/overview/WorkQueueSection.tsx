@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   FileWarning,
   Database,
@@ -49,6 +50,8 @@ const reasonIcon: Record<string, typeof FileWarning> = {
 };
 
 export function WorkQueueSection() {
+  const navigate = useNavigate();
+
   return (
     <SectionWrapper className="mt-10" delay={0.05}>
       <SectionTitle
@@ -64,14 +67,27 @@ export function WorkQueueSection() {
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         {workQueue.map((item, i) => (
-          <WorkQueueCard key={item.id} item={item} delay={0.08 + i * 0.06} />
+          <WorkQueueCard
+          key={item.id}
+          item={item}
+          delay={0.08 + i * 0.06}
+          onClick={() => navigate('/detections')}
+        />
         ))}
       </div>
     </SectionWrapper>
   );
 }
 
-function WorkQueueCard({ item, delay }: { item: WorkQueueItem; delay: number }) {
+function WorkQueueCard({
+  item,
+  delay,
+  onClick,
+}: {
+  item: WorkQueueItem;
+  delay: number;
+  onClick: () => void;
+}) {
   const styles = severityStyles[item.severity];
   const ReasonIcon = reasonIcon[item.reason] ?? FileWarning;
 
@@ -80,6 +96,7 @@ function WorkQueueCard({ item, delay }: { item: WorkQueueItem; delay: number }) 
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay, ease: 'easeOut' }}
+      onClick={onClick}
       className={cn(
         'group relative flex w-full items-stretch gap-0 overflow-hidden rounded-xl border border-border bg-card text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-elevated',
         styles.ring,

@@ -15,6 +15,7 @@ import { InsightsPage } from '@/pages/InsightsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { HelpPage } from '@/pages/HelpPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { Toaster } from '@/components/ui/sonner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +29,8 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <ThemeProvider>
+      <Toaster />
+
       <AuthProvider>
         <NotificationsProvider>
           <QueryClientProvider client={queryClient}>
@@ -68,3 +71,4 @@ export default function App() {
     </ThemeProvider>
   );
 }
+

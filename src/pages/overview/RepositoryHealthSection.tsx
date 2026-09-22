@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Database, ChevronRight } from 'lucide-react';
 import { repositories } from '@/mock-data';
 import { formatRelativeTime, formatFull, riskScoreColor, riskScoreBg } from '@/utils/format';
@@ -23,6 +24,8 @@ const statusTone: Record<string, string> = {
 };
 
 export function RepositoryHealthSection() {
+  const navigate = useNavigate();
+
   const repos = [...repositories]
     .sort((a, b) => b.riskScore - a.riskScore)
     .slice(0, 6);
@@ -55,6 +58,7 @@ export function RepositoryHealthSection() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3, delay: 0.08 + i * 0.05 }}
+                onClick={() => navigate('/data-sources')}
                 className="group grid cursor-pointer grid-cols-2 gap-x-4 gap-y-2 px-5 py-4 transition-colors hover:bg-background-subtle md:grid-cols-[1.6fr_0.8fr_1fr_1fr_0.9fr_24px] md:items-center"
               >
                 {/* repository */}

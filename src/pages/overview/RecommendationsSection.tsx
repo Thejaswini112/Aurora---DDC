@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, ShieldCheck, Radar, ScrollText, ArrowRight, Gauge } from 'lucide-react';
 import { aiRecommendations } from '@/mock-data';
 import { SectionTitle, SectionWrapper } from './SectionTitle';
@@ -43,8 +44,17 @@ export function RecommendationsSection() {
 }
 
 function RecommendationCard({ rec, delay }: { rec: AiRecommendation; delay: number }) {
+  const navigate = useNavigate();
   const cat = categoryConfig[rec.category];
   const Icon = cat.icon;
+  const route =
+  rec.category === 'scan'
+    ? '/scan-management'
+    : rec.category === 'policy'
+      ? '/policies'
+      : rec.category === 'access' || rec.category === 'remediation'
+        ? '/detections'
+        : '/overview';
 
   return (
     <motion.div
@@ -90,7 +100,10 @@ function RecommendationCard({ rec, delay }: { rec: AiRecommendation; delay: numb
         >
           {rec.impact} impact
         </span>
-        <button className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:text-primary-hover">
+        <button
+  onClick={() => navigate(route)}
+  className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:text-primary-hover"
+>
           {rec.ctaLabel}
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </button>
