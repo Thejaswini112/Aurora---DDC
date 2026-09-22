@@ -119,6 +119,7 @@ export interface Policy {
   status: PolicyStatus;
   severity: Severity;
   repositories: number;
+  repositoryIds?: string[];
   violations: number;
   lastUpdated: string;
   owner: string;

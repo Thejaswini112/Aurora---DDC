@@ -1,10 +1,33 @@
+import {
+  Edit3,
+  Eye,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Trash2,
+} from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import type { Policy } from "@/types";
-import { Eye } from "lucide-react";
 
 interface PoliciesTableProps {
   policies: Policy[];
+  onStatusChange?: (
+    policyId: string,
+    status: Policy["status"]
+  ) => void;
+  onView?: (policy: Policy) => void;
+  onEdit?: (policy: Policy) => void;
+  onDelete?: (policy: Policy) => void;
 }
 
 const statusVariant = {
@@ -20,10 +43,35 @@ const severityClass = {
   low: "bg-green-100 text-green-700 border-green-200",
 };
 
-export function PoliciesTable({ policies }: PoliciesTableProps) {
+export function PoliciesTable({
+  policies,
+  onStatusChange,
+  onView,
+  onEdit,
+  onDelete,
+}: PoliciesTableProps) {
+  if (policies.length === 0) {
+    return (
+      <div className="rounded-xl border bg-background p-12 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+          <Eye className="h-5 w-5 text-muted-foreground" />
+        </div>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          No policies found
+        </h3>
+
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          No policies match your current search or filters. Try changing your
+          filters or clearing them to see all policies.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-hidden rounded-xl border bg-background">
-      <table className="w-full">
+    <div className="overflow-x-auto rounded-xl border bg-background">
+      <table className="w-full min-w-[900px]">
         <thead className="border-b bg-muted/40">
           <tr className="text-left text-sm">
             <th className="px-6 py-4 font-medium">Policy</th>
@@ -46,6 +94,7 @@ export function PoliciesTable({ policies }: PoliciesTableProps) {
               <td className="px-6 py-4">
                 <div>
                   <p className="font-medium">{policy.name}</p>
+
                   <p className="text-sm text-muted-foreground">
                     {policy.category}
                   </p>
@@ -84,14 +133,87 @@ export function PoliciesTable({ policies }: PoliciesTableProps) {
                 )}
               </td>
 
-              <td className="px-6 py-4 text-muted-foreground">
-                {policy.lastUpdated}
+              <td className="px-6 py-4 text-sm text-muted-foreground">
+                {new Date(policy.lastUpdated).toLocaleDateString()}
               </td>
 
               <td className="px-6 py-4 text-right">
-                <Button size="icon" variant="ghost">
-                  <Eye className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center justify-end gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => onView?.(policy)}
+                    title="View policy"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => onEdit?.(policy)}
+                    title="Edit policy"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="More actions"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end">
+                      {policy.status === "enforced" && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            onStatusChange?.(policy.id, "paused")
+                          }
+                        >
+                          <Pause className="mr-2 h-4 w-4" />
+                          Pause policy
+                        </DropdownMenuItem>
+                      )}
+
+                      {policy.status === "paused" && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            onStatusChange?.(policy.id, "enforced")
+                          }
+                        >
+                          <Play className="mr-2 h-4 w-4" />
+                          Enforce policy
+                        </DropdownMenuItem>
+                      )}
+
+                      {policy.status === "draft" && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            onStatusChange?.(policy.id, "enforced")
+                          }
+                        >
+                          <Play className="mr-2 h-4 w-4" />
+                          Enforce policy
+                        </DropdownMenuItem>
+                      )}
+
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => onDelete?.(policy)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete policy
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </td>
             </tr>
           ))}
