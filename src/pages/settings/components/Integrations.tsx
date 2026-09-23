@@ -1,13 +1,119 @@
-import { integrations } from "@/mock-data/settings";
+import { useEffect, useState } from "react";
 import {
-  CheckCircle2,
   AlertCircle,
-  RefreshCw,
+  CheckCircle2,
   Database,
+  RefreshCw,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+
+import { integrations as initialIntegrations } from "@/mock-data/settings";
+import { Button } from "@/components/ui/button";
+
+const STORAGE_KEY = "aurora-integrations";
+
+type Integration = (typeof initialIntegrations)[number];
+type StoredIntegration = Omit<Integration, "icon">;
+
+function loadIntegrations(): Integration[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+
+    if (!stored) {
+      return initialIntegrations;
+    }
+
+    const parsed = JSON.parse(stored);
+
+    if (!Array.isArray(parsed)) {
+      return initialIntegrations;
+    }
+
+    return initialIntegrations.map((initialIntegration) => {
+      const savedIntegration = parsed.find(
+        (item: StoredIntegration) =>
+          item.id === initialIntegration.id,
+      );
+
+      if (!savedIntegration) {
+        return initialIntegration;
+      }
+
+      return {
+        ...initialIntegration,
+        ...savedIntegration,
+        // Always use the real Lucide component from mock data.
+        icon: initialIntegration.icon,
+      };
+    });
+  } catch {
+    return initialIntegrations;
+  }
+}
+
+function serializeIntegrations(
+  integrations: Integration[],
+): StoredIntegration[] {
+  return integrations.map(
+    ({ icon: _icon, ...integration }) => integration,
+  );
+}
 
 export default function Integrations() {
+  const [integrationList, setIntegrationList] =
+    useState<Integration[]>(loadIntegrations);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(
+          serializeIntegrations(integrationList),
+        ),
+      );
+    } catch {
+      toast.error("Unable to save integration changes");
+    }
+  }, [integrationList]);
+
+  const toggleConnection = (id: number) => {
+    setIntegrationList((current) =>
+      current.map((integration) => {
+        if (integration.id !== id) {
+          return integration;
+        }
+
+        const connecting =
+          integration.status !== "Connected";
+
+        toast.success(
+          connecting
+            ? `${integration.name} connected`
+            : `${integration.name} disconnected`,
+          {
+            description: connecting
+              ? "The integration is now available to Aurora."
+              : "The integration has been disconnected from Aurora.",
+          },
+        );
+
+        return {
+          ...integration,
+          status: connecting
+            ? "Connected"
+            : "Disconnected",
+          health: connecting
+            ? "Healthy"
+            : "Attention",
+          lastSync: connecting
+            ? "Just now"
+            : integration.lastSync,
+        };
+      }),
+    );
+  };
+
   return (
     <section className="space-y-6">
       <div>
@@ -16,15 +122,16 @@ export default function Integrations() {
         </h2>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          Connected repositories and cloud services monitored by Aurora.
+          Connected repositories and cloud services monitored by
+          Aurora.
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {integrations.map((integration, index) => {
+        {integrationList.map((integration, index) => {
           const Icon = integration.icon;
-
-          const connected = integration.status === "Connected";
+          const connected =
+            integration.status === "Connected";
 
           return (
             <motion.div
@@ -35,10 +142,9 @@ export default function Integrations() {
                 duration: 0.3,
                 delay: index * 0.08,
               }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card transition-all hover:shadow-card-hover hover:-translate-y-1"
+              className="rounded-xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-1 hover:shadow-card-hover"
             >
               <div className="flex items-center justify-between">
-
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background-subtle">
                   <Icon className="h-6 w-6 text-primary" />
                 </div>
@@ -48,7 +154,6 @@ export default function Integrations() {
                 ) : (
                   <AlertCircle className="h-6 w-6 text-warning" />
                 )}
-
               </div>
 
               <h3 className="mt-5 text-lg font-semibold">
@@ -56,7 +161,6 @@ export default function Integrations() {
               </h3>
 
               <div className="mt-5 space-y-4">
-
                 <InfoRow
                   label="Status"
                   value={integration.status}
@@ -83,14 +187,19 @@ export default function Integrations() {
                     {integration.lastSync}
                   </span>
                 </div>
-
               </div>
 
-              <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background-subtle py-2.5 text-sm font-medium transition hover:bg-muted">
-                <Database className="h-4 w-4" />
-                Manage Connection
-              </button>
+              <Button
+                variant="outline"
+                className="mt-6 w-full"
+                onClick={() =>
+                  toggleConnection(integration.id)
+                }
+              >
+                <Database className="mr-2 h-4 w-4" />
 
+                {connected ? "Disconnect" : "Connect"}
+              </Button>
             </motion.div>
           );
         })}
@@ -118,7 +227,9 @@ function InfoRow({
 
       <span
         className={`text-sm font-medium ${
-          success ? "text-success" : "text-foreground"
+          success
+            ? "text-success"
+            : "text-foreground"
         }`}
       >
         {value}
