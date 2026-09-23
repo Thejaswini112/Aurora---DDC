@@ -1,453 +1,547 @@
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { detections } from "@/mock-data";
 import {
-    Drawer,
-  } from "@/components/common";
-  
-  import type { Scan } from "@/types";
-  
-  import {
-    Database,
-    ShieldCheck,
-    Clock3,
-    Search,
-    AlertTriangle,
-    CheckCircle2,
-    PlayCircle,
-    TimerReset,
-    FileSearch,
-    BarChart3,
-    User,
-    CalendarClock,
-  } from "lucide-react";
-  
-  import { Button } from "@/components/ui/button";
-  import { Progress } from "@/components/ui/progress";
-  import { Badge } from "@/components/ui/badge";
-  
-  interface ScanDrawerProps {
-    scan: Scan | null;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }
-  
-  const STATUS = {
-    scanning: {
-      icon: PlayCircle,
-      color: "text-primary",
-      badge: "default" as const,
-      title: "Scan in Progress",
-      description:
-        "Aurora is actively discovering sensitive assets. Findings will appear as the scan progresses.",
-    },
-    completed: {
-      icon: CheckCircle2,
-      color: "text-success",
-      badge: "secondary" as const,
-      title: "Scan Completed",
-      description:
-        "The scan completed successfully. All findings have been indexed and are available for investigation.",
-    },
-    failed: {
-      icon: AlertTriangle,
-      color: "text-danger",
-      badge: "destructive" as const,
-      title: "Scan Failed",
-      description:
-        "The scan terminated before completion. Review the connector health and restart the scan.",
-    },
-    scheduled: {
-      icon: TimerReset,
-      color: "text-warning",
-      badge: "outline" as const,
-      title: "Scheduled",
-      description:
-        "This scan is scheduled and will begin automatically at its configured time.",
-    },
-    paused: {
-      icon: TimerReset,
-      color: "text-warning",
-      badge: "outline" as const,
-      title: "Scan Paused",
-      description:
-        "This scan is paused and can be resumed when the repository is ready.",
-    },
-  } as const;
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  FileSearch,
+  FolderOpen,
+  Pause,
+  Play,
+  ShieldAlert,
+  Sparkles,
+  X,
+} from "lucide-react";
 
-  export function ScanDrawer({
-    scan,
-    open,
-    onOpenChange,
-  }: ScanDrawerProps) {
-    if (!scan) return null;
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import type { Scan } from "@/types";
+
+interface ScanDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  scan: Scan | null;
+  onStartScan?: (scanId: string) => void;
+  onStopScan?: (scanId: string) => void;
+}
+
+function getStatusBadge(status: Scan["status"]) {
+  switch (status) {
+    case "completed":
+      return (
+        <Badge variant="outline" className="gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          Completed
+        </Badge>
+      );
+
+    case "scanning":
+      return (
+        <Badge variant="secondary" className="gap-1">
+          <Clock className="h-3 w-3" />
+          Running
+        </Badge>
+      );
+
+    case "scheduled":
+      return (
+        <Badge variant="outline" className="gap-1">
+          <Calendar className="h-3 w-3" />
+          Scheduled
+        </Badge>
+      );
+
+    case "paused":
+      return (
+        <Badge variant="outline" className="gap-1">
+          <Pause className="h-3 w-3" />
+          Paused
+        </Badge>
+      );
+
+    case "failed":
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <AlertCircle className="h-3 w-3" />
+          Failed
+        </Badge>
+      );
+
+    default:
+      return null;
+  }
+}
+
+export function ScanDrawer({
+  open,
+  onOpenChange,
+  scan,
+  onStartScan,
+  onStopScan,
+}: ScanDrawerProps) {
+  const navigate = useNavigate();
+  const repositoryDetections = useMemo(
+    () =>
+      detections.filter(
+        (detection) => detection.repositoryId === scan?.repositoryId,
+      ),
+    [scan?.repositoryId],
+  );
   
-    const status = STATUS[scan.status];
-    const StatusIcon = status.icon;
-  
-    return (
-      <Drawer
-        open={open}
-        onOpenChange={onOpenChange}
-        title={scan.name}
-        description={scan.repositoryName}
-        footer={
-          <>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Close
-            </Button>
-  
-            {scan.status === "scanning" && (
-              <Button variant="destructive">
-                Stop Scan
-              </Button>
-            )}
-  
-            {scan.status === "scheduled" && (
-              <Button>
-                Start Scan
-              </Button>
-            )}
-          </>
-        }
-      >
-        <div className="space-y-8">
-  
-          {/* Status Banner */}
-  
-          <div className="rounded-xl border bg-muted/30 p-5">
-  
-            <div className="flex items-start justify-between">
-  
-              <div className="flex gap-4">
-  
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                  <StatusIcon className={`h-6 w-6 ${status.color}`} />
-                </div>
-  
-                <div>
-  
-                  <h3 className="text-lg font-semibold">
-                    {status.title}
-                  </h3>
-  
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {status.description}
-                  </p>
-  
-                </div>
-  
-              </div>
-  
-              <Badge variant={status.badge}>
-                {scan.status}
-              </Badge>
-  
-            </div>
-  
-            <div className="mt-6">
-  
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span>Overall Progress</span>
-                <span className="font-medium">
-                  {scan.progress}%
-                </span>
-              </div>
-  
-              <Progress value={scan.progress} />
-  
-              <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-                <span>
-                  Started {scan.startedAt}
-                </span>
-  
-                <span>
-                  ETA {scan.estimatedCompletion}
-                </span>
-              </div>
-  
-            </div>
-  
+  const riskSnapshot = useMemo(
+    () => ({
+      critical: repositoryDetections.filter(
+        (detection) => detection.severity === "critical",
+      ).length,
+      high: repositoryDetections.filter(
+        (detection) => detection.severity === "high",
+      ).length,
+      medium: repositoryDetections.filter(
+        (detection) => detection.severity === "medium",
+      ).length,
+      low: repositoryDetections.filter(
+        (detection) => detection.severity === "low",
+      ).length,
+      affectedAssets: repositoryDetections.reduce(
+        (total, detection) => total + detection.affectedAssets,
+        0,
+      ),
+    }),
+    [repositoryDetections],
+  );
+
+  if (!scan) {
+    return null;
+  }
+
+  const isRunning = scan.status === "scanning";
+  const isScheduled = scan.status === "scheduled";
+  const isCompleted = scan.status === "completed";
+  const isPaused = scan.status === "paused";
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+        <SheetHeader className="pr-8">
+          <div className="flex items-center gap-2">
+            {getStatusBadge(scan.status)}
           </div>
-  
-          {/* Statistics */}
-  
+
+          <SheetTitle className="text-xl">{scan.name}</SheetTitle>
+
+          <SheetDescription>
+            Scan details, progress, results, and actions.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="space-y-8 px-6 pb-8">
+          {/* Scan Overview */}
+
           <section>
-  
+            <h3 className="mb-4 text-base font-semibold">Scan Overview</h3>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <FolderOpen className="h-4 w-4" />
+                  Repository
+                </div>
+
+                <p className="mt-2 text-sm font-medium">
+                  {scan.repositoryName}
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Sparkles className="h-4 w-4" />
+                  Scan Type
+                </div>
+
+                <p className="mt-2 text-sm font-medium capitalize">
+                  {scan.type}
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  Created / Started
+                </div>
+
+                <p className="mt-2 text-sm font-medium">
+                  {scan.startedAt}
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  Last Run
+                </div>
+
+                <p className="mt-2 text-sm font-medium">
+                  {scan.lastRun}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Progress */}
+
+          <section>
+            <h3 className="mb-4 text-base font-semibold">Progress</h3>
+
+            {isScheduled ? (
+              <div className="rounded-lg border border-dashed bg-background p-4">
+                <p className="text-sm font-medium">Waiting to start</p>
+
+                <p className="mt-1 text-xs text-muted-foreground">
+                  This scan is scheduled and will begin when its configured
+                  execution window starts.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span>Overall Progress</span>
+
+                  <span className="font-medium">{scan.progress}%</span>
+                </div>
+
+                <Progress value={scan.progress} />
+
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                  <span>Started {scan.startedAt}</span>
+
+                  <span>ETA {scan.estimatedCompletion}</span>
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* Scan Statistics */}
+
+          <section>
             <h3 className="mb-4 text-base font-semibold">
               Scan Statistics
             </h3>
-  
-            <div className="grid grid-cols-2 gap-4">
-  
-              <StatCard
-                icon={Database}
-                title="Assets Scanned"
-                value={scan.assetsScanned.toLocaleString()}
-              />
-  
-              <StatCard
-                icon={ShieldCheck}
-                title="Sensitive Findings"
-                value={scan.sensitiveFound.toString()}
-              />
-  
-              <StatCard
-                icon={Search}
-                title="Scan Type"
-                value={scan.type}
-              />
-  
-              <StatCard
-                icon={Clock3}
-                title="Progress"
-                value={`${scan.progress}%`}
-              />
-  
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-lg border p-4">
+                <p className="text-xs text-muted-foreground">
+                  Assets Scanned
+                </p>
+
+                <p className="mt-2 text-2xl font-semibold">
+                  {scan.assetsScanned.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <p className="text-xs text-muted-foreground">
+                  Sensitive Found
+                </p>
+
+                <p className="mt-2 text-2xl font-semibold">
+                  {scan.sensitiveFound.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <p className="text-xs text-muted-foreground">Duration</p>
+
+                <p className="mt-2 text-2xl font-semibold">
+                  {scan.duration}
+                </p>
+              </div>
             </div>
-  
           </section>
-  
+
+          {/* Results Summary */}
+
+          {isCompleted && (
+            <section>
+              <h3 className="mb-4 text-base font-semibold">
+                Scan Results
+              </h3>
+
+              <div className="rounded-xl border bg-muted/20 p-5">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Result
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold">
+                      Completed successfully
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Assets analyzed
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold">
+                      {scan.assetsScanned.toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Sensitive findings
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold">
+                      {scan.sensitiveFound.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 border-t pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    The scan completed its discovery run. Review the detected
+                    findings to investigate exposed or sensitive data.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Repository Details */}
-  
+
           <section>
-  
             <h3 className="mb-4 text-base font-semibold">
-              Repository Information
+              Repository Details
             </h3>
-  
-            <div className="rounded-xl border">
-  
-              <InfoRow
-                icon={Database}
-                label="Repository"
-                value={scan.repositoryName}
-              />
-  
-              <InfoRow
-                icon={User}
-                label="Initiated By"
-                value={scan.triggeredBy}
-              />
-  
-              <InfoRow
-                icon={CalendarClock}
-                label="Last Run"
-                value={scan.lastRun}
-              />
-  
-              <InfoRow
-                icon={Clock3}
-                label="Estimated Completion"
-                value={scan.estimatedCompletion}
-              />
-  
+
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center gap-3">
+                <FolderOpen className="h-5 w-5 text-muted-foreground" />
+
+                <div>
+                  <p className="text-sm font-medium">
+                    {scan.repositoryName}
+                  </p>
+
+                  <p className="text-xs text-muted-foreground">
+                    Repository connected to this scan
+                  </p>
+                </div>
+              </div>
             </div>
-  
           </section>
 
-                  {/* Activity Timeline */}
+          {/* Activity */}
 
-        <section>
-          <h3 className="mb-4 text-base font-semibold">
-            Recent Activity
-          </h3>
+          <section>
+            <h3 className="mb-4 text-base font-semibold">Activity</h3>
 
-          <div className="space-y-4 rounded-xl border p-4">
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
 
-            <TimelineItem
-              title="Scan initiated"
-              subtitle={`Started by ${scan.triggeredBy}`}
-            />
+                <div>
+                  <p className="text-sm font-medium">
+                    Scan {scan.status === "scanning" ? "started" : "created"}
+                  </p>
 
-            <TimelineItem
-              title={`${scan.assetsScanned.toLocaleString()} assets processed`}
-              subtitle="Discovery engine is indexing repository contents."
-            />
+                  <p className="text-xs text-muted-foreground">
+                    Triggered by {scan.triggeredBy}
+                  </p>
+                </div>
+              </div>
 
-            <TimelineItem
-              title={`${scan.sensitiveFound} sensitive findings detected`}
-              subtitle="Classified using Aurora's detection engine."
-            />
+              {isCompleted && (
+                <div className="flex gap-3">
+                  <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
 
-            <TimelineItem
-              title={`Current status: ${scan.status}`}
-              subtitle="Latest execution state."
-              last
-            />
+                  <div>
+                    <p className="text-sm font-medium">
+                      Scan completed
+                    </p>
 
-          </div>
-        </section>
+                    <p className="text-xs text-muted-foreground">
+                      Discovery finished successfully.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="mt-4 rounded-xl border bg-background p-5">
+  <div className="mb-4">
+    <p className="text-sm font-semibold">Repository Risk Snapshot</p>
+    <p className="mt-1 text-xs text-muted-foreground">
+      Current detections associated with {scan.repositoryName}.
+    </p>
+  </div>
 
-        {/* AI Recommendation */}
-
-        <section>
-          <h3 className="mb-4 text-base font-semibold">
-            AI Recommendation
-          </h3>
-
-          <div className="rounded-xl border bg-primary/5 p-5">
-
-            <div className="mb-3 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-
-              <h4 className="font-medium">
-                Suggested Next Action
-              </h4>
-            </div>
-
-            <p className="text-sm leading-6 text-muted-foreground">
-              {scan.sensitiveFound === 0
-                ? "No sensitive information was detected. Consider scheduling recurring scans to continuously monitor this repository."
-                : `Aurora recommends reviewing the ${scan.sensitiveFound} discovered finding${
-                    scan.sensitiveFound > 1 ? "s" : ""
-                  } and creating remediation policies if they contain regulated data.`}
-            </p>
-
-          </div>
-        </section>
-
-        {/* Recommended Actions */}
-
-        <section>
-          <h3 className="mb-4 text-base font-semibold">
-            Quick Actions
-          </h3>
-
-          <div className="grid gap-3">
-
-            <Button
-              variant="outline"
-              className="justify-start"
-            >
-              <FileSearch className="mr-2 h-4 w-4" />
-              View Findings
-            </Button>
-
-            <Button
-              variant="outline"
-              className="justify-start"
-            >
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              Create Policy
-            </Button>
-
-            <Button
-              variant="outline"
-              className="justify-start"
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Download Report
-            </Button>
-
-          </div>
-        </section>
-
-      </div>
-    </Drawer>
-  );
-}
-
-interface StatCardProps {
-  icon: React.ElementType;
-  title: string;
-  value: string;
-}
-
-function StatCard({
-  icon: Icon,
-  title,
-  value,
-}: StatCardProps) {
-  return (
-    <div className="rounded-xl border p-4 transition-colors hover:bg-muted/40">
-
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-        <Icon className="h-5 w-5 text-primary" />
-      </div>
-
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-        {title}
-      </p>
-
+  <div className="grid gap-3 sm:grid-cols-4">
+    <div className="rounded-lg border p-3">
+      <p className="text-xs text-muted-foreground">Critical</p>
       <p className="mt-1 text-xl font-semibold">
-        {value}
+        {riskSnapshot.critical}
       </p>
-
     </div>
-  );
-}
 
-interface InfoRowProps {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-}
+    <div className="rounded-lg border p-3">
+      <p className="text-xs text-muted-foreground">High</p>
+      <p className="mt-1 text-xl font-semibold">
+        {riskSnapshot.high}
+      </p>
+    </div>
 
-function InfoRow({
-  icon: Icon,
-  label,
-  value,
-}: InfoRowProps) {
-  return (
-    <div className="flex items-center justify-between border-b px-5 py-4 last:border-0">
+    <div className="rounded-lg border p-3">
+      <p className="text-xs text-muted-foreground">Medium</p>
+      <p className="mt-1 text-xl font-semibold">
+        {riskSnapshot.medium}
+      </p>
+    </div>
 
-      <div className="flex items-center gap-3">
+    <div className="rounded-lg border p-3">
+      <p className="text-xs text-muted-foreground">Low</p>
+      <p className="mt-1 text-xl font-semibold">
+        {riskSnapshot.low}
+      </p>
+    </div>
+  </div>
 
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-          <Icon className="h-4 w-4 text-muted-foreground" />
+  <div className="mt-3 rounded-lg border p-3">
+    <p className="text-xs text-muted-foreground">
+      Affected Assets
+    </p>
+    <p className="mt-1 text-xl font-semibold">
+      {riskSnapshot.affectedAssets.toLocaleString()}
+    </p>
+  </div>
+</div>
+              {isPaused && (
+                <div className="flex gap-3">
+                  <div className="mt-1 h-2 w-2 rounded-full bg-muted-foreground" />
+
+                  <div>
+                    <p className="text-sm font-medium">Scan paused</p>
+
+                    <p className="text-xs text-muted-foreground">
+                      The scan is currently paused.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* AI Recommendation */}
+
+          <section>
+            <div className="rounded-xl border bg-muted/20 p-5">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <ShieldAlert className="h-4 w-4 text-primary" />
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold">
+                    AI Recommendation
+                  </p>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Review sensitive findings after the scan completes and
+                    prioritize high-risk exposures for investigation.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Quick Actions */}
+
+          {/* Quick Actions */}
+
+<section>
+  <h3 className="mb-4 text-base font-semibold">
+    Quick Actions
+  </h3>
+
+  <div className="grid gap-2">
+    {isScheduled && onStartScan && (
+      <Button
+        className="justify-start"
+        onClick={() => onStartScan?.(scan.id)}
+      >
+        <Play className="mr-2 h-4 w-4" />
+        Run Now
+      </Button>
+    )}
+
+    {isRunning && onStopScan && (
+      <Button
+        variant="outline"
+        className="justify-start"
+        onClick={() => onStartScan?.(scan.id)}
+      >
+        <Pause className="mr-2 h-4 w-4" />
+        Pause Scan
+      </Button>
+    )}
+
+{scan.status === "completed" && (
+  <Button
+    variant="outline"
+    className="w-full justify-start"
+    onClick={() => onStartScan?.(scan.id)}
+  >
+    <Play className="mr-2 h-4 w-4" />
+    Run Again
+  </Button>
+)}
+
+<Button
+  variant="outline"
+  className="w-full justify-start"
+  onClick={() => {
+    onOpenChange(false);
+    navigate("/detections");
+  }}
+>
+  <FileSearch className="mr-2 h-4 w-4" />
+  View Findings
+</Button>
+
+<Button
+  variant="outline"
+  className="w-full justify-start"
+  onClick={() => {
+    onOpenChange(false);
+    navigate("/policies");
+  }}
+>
+  <ShieldAlert className="mr-2 h-4 w-4" />
+  View Policies
+</Button>
+
+<Button
+  variant="outline"
+  className="w-full justify-start"
+  onClick={() => onOpenChange(false)}
+>
+  <X className="mr-2 h-4 w-4" />
+  Close
+</Button>
+  </div>
+</section>
         </div>
-
-        <span className="text-sm text-muted-foreground">
-          {label}
-        </span>
-
-      </div>
-
-      <span className="font-medium">
-        {value}
-      </span>
-
-    </div>
-  );
-}
-
-interface TimelineItemProps {
-  title: string;
-  subtitle: string;
-  last?: boolean;
-}
-
-function TimelineItem({
-  title,
-  subtitle,
-  last = false,
-}: TimelineItemProps) {
-  return (
-    <div className="flex gap-4">
-
-      <div className="flex flex-col items-center">
-
-        <div className="h-3 w-3 rounded-full bg-primary" />
-
-        {!last && (
-          <div className="mt-1 h-full w-px bg-border" />
-        )}
-
-      </div>
-
-      <div className="pb-4">
-
-        <p className="font-medium">
-          {title}
-        </p>
-
-        <p className="mt-1 text-sm text-muted-foreground">
-          {subtitle}
-        </p>
-
-      </div>
-
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
