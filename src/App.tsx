@@ -16,7 +16,7 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { HelpPage } from '@/pages/HelpPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { Toaster } from '@/components/ui/sonner';
-import { NotificationsPage } from '@/pages/NotificationsPage';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,7 +60,6 @@ export default function App() {
                   <Route path="/policies" element={<PoliciesPage />} />
                   <Route path="/insights" element={<InsightsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/help" element={<HelpPage />} />
                   <Route path="/" element={<Navigate to="/overview" replace />} />
                   <Route path="*" element={<NotFoundPage />} />
