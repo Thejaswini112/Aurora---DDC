@@ -1,29 +1,9 @@
-import { useMemo } from "react";
-import {
-  Archive,
-  Building2,
-  Clock3,
-  Globe2,
-  ShieldCheck,
-} from "lucide-react";
-
+import { Building2, Globe2, Clock3, Archive, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { workspaceSettings } from "@/mock-data/settings";
 
 export default function WorkspaceSettings() {
   const { workspace } = useAuth();
-
-  const settings = useMemo(
-    () => ({
-      organization: workspace.name,
-      region: workspace.region,
-      timezone: workspaceSettings.timezone,
-      retention: workspaceSettings.retention,
-      defaultClassification:
-        workspaceSettings.defaultClassification,
-    }),
-    [workspace],
-  );
 
   return (
     <section className="space-y-6">
@@ -41,38 +21,32 @@ export default function WorkspaceSettings() {
         <div className="grid gap-6 md:grid-cols-2">
           <SettingItem
             icon={Building2}
-            label="Workspace"
-            value={settings.organization}
+            label="Organization"
+            value={workspace.name}
           />
 
           <SettingItem
             icon={Globe2}
             label="Region"
-            value={settings.region}
+            value={workspace.region}
           />
 
           <SettingItem
             icon={Clock3}
             label="Timezone"
-            value={settings.timezone}
+            value={workspaceSettings.timezone}
           />
 
           <SettingItem
             icon={Archive}
             label="Retention Policy"
-            value={settings.retention}
+            value={workspaceSettings.retention}
           />
 
           <SettingItem
             icon={ShieldCheck}
             label="Default Classification"
-            value={settings.defaultClassification}
-          />
-
-          <SettingItem
-            icon={Building2}
-            label="Plan"
-            value={workspace.plan}
+            value={workspaceSettings.defaultClassification}
           />
         </div>
       </div>

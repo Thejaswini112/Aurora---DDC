@@ -1,10 +1,4 @@
-import {
-  Building2,
-  Check,
-  ChevronsUpDown,
-  Plus,
-} from "lucide-react";
-
+import { Check, ChevronsUpDown, Building2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,16 +7,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 import { useAuth } from "@/contexts/AuthContext";
 import { workspaces } from "@/mock-data";
-import { cn } from "@/lib/utils";
 
 export function WorkspaceSwitcher() {
-  const {
-    workspace,
-    switchWorkspace,
-  } = useAuth();
+  const { workspace, switchWorkspace } = useAuth();
 
   return (
     <DropdownMenu>
@@ -46,21 +35,17 @@ export function WorkspaceSwitcher() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent
-        side="right"
-        align="start"
-        className="w-[260px]"
-      >
+      <DropdownMenuContent side="right" align="start" className="w-[260px]">
         <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
           Workspaces
         </DropdownMenuLabel>
 
         <DropdownMenuSeparator />
 
-        {workspaces.map((item) => (
+        {workspaces.map((ws) => (
           <DropdownMenuItem
-            key={item.id}
-            onClick={() => switchWorkspace(item)}
+            key={ws.id}
+            onClick={() => switchWorkspace(ws)}
             className="flex items-start gap-2.5 py-2"
           >
             <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10">
@@ -69,30 +54,19 @@ export function WorkspaceSwitcher() {
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-foreground">
-                {item.name}
+                {ws.name}
               </p>
 
               <p className="truncate text-[11px] text-muted-foreground">
-                {item.plan} · {item.region}
+                {ws.plan} · {ws.region}
               </p>
             </div>
 
-            {item.id === workspace.id && (
+            {ws.id === workspace.id && (
               <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             )}
           </DropdownMenuItem>
         ))}
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem
-          className={cn(
-            "text-muted-foreground",
-          )}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Connect a workspace
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,7 +1,6 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -19,14 +18,17 @@ interface AuthSession {
   workspace: Workspace;
 }
 
+interface LoginInput {
+  email: string;
+  password?: string;
+  remember: boolean;
+  workspaceId?: string;
+  provider?: "email" | "google" | "microsoft" | "sso";
+}
+
 interface AuthContextValue extends AuthSession {
   isAuthenticated: boolean;
-  login: (input: {
-    organization: string;
-    email: string;
-    password: string;
-    remember: boolean;
-  }) => Promise<void>;
+  login: (input: LoginInput) => Promise<void>;
   logout: () => void;
   switchWorkspace: (workspace: Workspace) => void;
 }
@@ -43,16 +45,14 @@ interface StoredSession {
   workspaceId: string;
 }
 
-function loadStoredSession(): StoredSession | null {
+function parseStoredSession(
+  raw: string | null,
+): StoredSession | null {
+  if (!raw) {
+    return null;
+  }
+
   try {
-    const raw =
-      window.localStorage.getItem(REMEMBER_STORAGE_KEY) ??
-      window.sessionStorage.getItem(SESSION_STORAGE_KEY);
-
-    if (!raw) {
-      return null;
-    }
-
     const parsed = JSON.parse(raw);
 
     if (
@@ -69,10 +69,29 @@ function loadStoredSession(): StoredSession | null {
   }
 }
 
-function findWorkspace(workspaceId: string): Workspace {
+function loadStoredSession(): StoredSession | null {
+  const persistentSession = parseStoredSession(
+    window.localStorage.getItem(REMEMBER_STORAGE_KEY),
+  );
+
+  if (persistentSession) {
+    return persistentSession;
+  }
+
+  return parseStoredSession(
+    window.sessionStorage.getItem(SESSION_STORAGE_KEY),
+  );
+}
+
+function findWorkspace(workspaceId?: string): Workspace {
+  if (!workspaceId) {
+    return organization;
+  }
+
   return (
-    workspaces.find((workspace) => workspace.id === workspaceId) ??
-    organization
+    workspaces.find(
+      (workspace) => workspace.id === workspaceId,
+    ) ?? organization
   );
 }
 
@@ -85,10 +104,8 @@ function persistSession(
     workspaceId: workspace.id,
   };
 
-  window.sessionStorage.setItem(
-    SESSION_STORAGE_KEY,
-    JSON.stringify(payload),
-  );
+  window.localStorage.removeItem(REMEMBER_STORAGE_KEY);
+  window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
 
   if (remember) {
     window.localStorage.setItem(
@@ -96,7 +113,10 @@ function persistSession(
       JSON.stringify(payload),
     );
   } else {
-    window.localStorage.removeItem(REMEMBER_STORAGE_KEY);
+    window.sessionStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify(payload),
+    );
   }
 }
 
@@ -118,49 +138,39 @@ export function AuthProvider({
         return null;
       }
 
-      const workspace = findWorkspace(
-        stored.workspaceId,
-      );
-
       return {
         user: currentUser,
-        workspace,
+        workspace: findWorkspace(stored.workspaceId),
       };
     });
 
   const login = async ({
-    organization: organizationInput,
     email,
     password,
     remember,
-  }: {
-    organization: string;
-    email: string;
-    password: string;
-    remember: boolean;
-  }) => {
-    // Mock authentication:
-    // any non-empty organization, email and password are accepted.
-    if (
-      !organizationInput.trim() ||
-      !email.trim() ||
-      !password.trim()
-    ) {
-      throw new Error(
-        "Organization, email and password are required.",
-      );
+    workspaceId,
+    provider = "email",
+  }: LoginInput) => {
+    if (!email.trim()) {
+      throw new Error("Work email is required.");
     }
 
+    if (
+      provider === "email" &&
+      (!password || !password.trim())
+    ) {
+      throw new Error("Password is required.");
+    }
+
+    // Aurora currently uses mock authentication.
+    // No real identity provider or credential validation
+    // is performed in this frontend prototype.
     await new Promise((resolve) =>
       setTimeout(resolve, 650),
     );
 
     const selectedWorkspace =
-      workspaces.find(
-        (workspace) =>
-          workspace.id === organizationInput ||
-          workspace.name === organizationInput,
-      ) ?? organization;
+      findWorkspace(workspaceId);
 
     persistSession(
       selectedWorkspace,
@@ -211,23 +221,6 @@ export function AuthProvider({
       };
     });
   };
-
-  useEffect(() => {
-    if (!session) {
-      return;
-    }
-
-    const validWorkspace = workspaces.find(
-      (workspace) =>
-        workspace.id === session.workspace.id,
-    );
-
-    if (!validWorkspace) {
-      switchWorkspace(organization);
-    }
-    // Workspace validation only needs to run on initial mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const value: AuthContextValue = {
     user: session?.user ?? currentUser,
